@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>M3U Studio Pro - Seletor de Conteúdo</title>
+    <title>M3U Studio Pro - Engine Otimizada</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
@@ -15,7 +15,7 @@
             --success: #00C851;
             --warning: #ffbb33;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; outline: none; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--bg-deep); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
         
         .container { 
@@ -32,12 +32,11 @@
         .inp, select.inp { 
             width: 100%; padding: 14px; background: #151515; 
             border: 1px solid #333; color: #fff; font-weight: 600; 
-            border-radius: 8px; font-size: 14px; outline: none; transition: 0.3s;
+            border-radius: 8px; font-size: 14px; transition: 0.3s;
         }
         .inp:focus, select.inp:focus { border-color: var(--ferrari-red); background: #1a1a1a; }
         select.inp { appearance: none; cursor: pointer; color: var(--warning); font-weight: 800; }
         
-        /* Ícone no Select para indicar que é clicável */
         .select-wrapper { position: relative; }
         .select-wrapper::after {
             content: '\f0d7'; font-family: "Font Awesome 6 Free"; font-weight: 900;
@@ -72,7 +71,7 @@
 <div class="container">
     <div class="logo-txt"><i class="fas fa-sliders red-text"></i> M3U <span class="red-text">STUDIO</span></div>
 
-    <form id="extractForm" onsubmit="event.preventDefault(); startExtraction();">
+    <form onsubmit="event.preventDefault(); AppBuilder.start();">
         <div class="form-group">
             <input type="url" id="serverUrl" class="inp" placeholder="URL DNS (Ex: http://tv.com:8080)" required autocomplete="off">
         </div>
@@ -96,8 +95,8 @@
         <div class="form-group select-wrapper">
             <label>2. QUAL O FORMATO?</label>
             <select id="format" class="inp">
-                <option value="ts">Formato: TS</option>
-                <option value="m3u8">Formato: M3U8</option>
+                <option value="ts">Formato: TS (Smart TV)</option>
+                <option value="m3u8">Formato: M3U8 (Web / App)</option>
             </select>
         </div>
         
@@ -107,13 +106,12 @@
     </form>
 
     <div id="statusBox" class="status-box">
-        <i class="fas fa-circle-notch spin"></i> <span id="statusText">Processando dados...</span>
+        <i class="fas fa-circle-notch spin"></i> <span id="statusText">Conectando...</span>
     </div>
 
     <div id="resultArea" class="result-area">
         <div class="success-text"><i class="fas fa-check-circle"></i> ARQUIVO PRONTO!</div>
-        <div class="stats" id="statsText">
-            </div>
+        <div class="stats" id="statsText"></div>
         <a id="downloadBtn" href="#" class="btn-download" download="lista.m3u">
             <i class="fas fa-download"></i> BAIXAR AGORA
         </a>
@@ -121,110 +119,140 @@
 </div>
 
 <script>
-    async function startExtraction() {
-        const btn = document.getElementById('btnSubmit');
-        const statusBox = document.getElementById('statusBox');
-        const statusText = document.getElementById('statusText');
-        const resultArea = document.getElementById('resultArea');
-        
-        let server = document.getElementById('serverUrl').value.trim();
-        let user = document.getElementById('username').value.trim();
-        let pass = document.getElementById('password').value.trim();
-        let format = document.getElementById('format').value;
-        let contentType = document.getElementById('contentType').value;
-        
-        if(server.endsWith('/')) server = server.slice(0, -1);
-        if(!server.startsWith('http')) server = 'http://' + server;
+    /* Lógica inspirada na Engenharia de Rede do HDTV GOLD PRO */
+    var AppBuilder = {
+        start: function() {
+            var btn = document.getElementById('btnSubmit');
+            var statusBox = document.getElementById('statusBox');
+            var resultArea = document.getElementById('resultArea');
 
-        btn.disabled = true;
-        resultArea.style.display = 'none';
-        statusBox.style.display = 'block';
+            this.server = document.getElementById('serverUrl').value.trim();
+            this.user = document.getElementById('username').value.trim();
+            this.pass = document.getElementById('password').value.trim();
+            this.format = document.getElementById('format').value;
+            this.type = document.getElementById('contentType').value;
 
-        try {
-            let rawUrl = `${server}/get.php?username=${user}&password=${pass}&type=m3u_plus&output=${format}`;
-            let textData = "";
+            // Tratamento de URL
+            if(this.server.charAt(this.server.length - 1) === '/') this.server = this.server.slice(0, -1);
+            if(this.server.indexOf('http') !== 0) this.server = 'http://' + this.server;
 
-            statusText.innerText = "Conectando ao servidor...";
+            btn.disabled = true;
+            resultArea.style.display = 'none';
+            statusBox.style.display = 'block';
+            document.getElementById('statusText').innerText = "Conectando ao servidor...";
+
+            this.fetchData();
+        },
+
+        fetchData: function() {
+            var rawUrl = this.server + "/get.php?username=" + this.user + "&password=" + this.pass + "&type=m3u_plus&output=" + this.format;
             
-            try {
-                const res = await fetch(rawUrl);
-                if (!res.ok) throw new Error("CORS Block");
-                textData = await res.text();
-            } catch (e) {
-                statusText.innerText = "Baixando lista de forma segura (Proxy)...";
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`;
-                const proxyRes = await fetch(proxyUrl);
-                if (!proxyRes.ok) throw new Error("Falha ao comunicar com o servidor.");
-                textData = await proxyRes.text();
-            }
+            // Quebra de Cache idêntica ao player web que você enviou
+            var cacheBuster = "&_t=" + new Date().getTime(); 
 
-            statusText.innerText = "Aplicando o seu filtro...";
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", rawUrl + cacheBuster, true);
+            xhr.timeout = 30000; // Timeout seguro
 
-            // O cabeçalho exato que você pediu sempre na primeira linha
-            let m3uContent = '#EXTM3U size="Medium"\n';
-            let itemCount = 0;
+            var self = this;
+            xhr.onload = function() {
+                // Se a resposta for sucesso e tiver tamanho suficiente
+                if(xhr.status === 200 && xhr.responseText.length > 100) {
+                    self.processData(xhr.responseText);
+                } else {
+                    self.fetchProxy(rawUrl);
+                }
+            };
+            xhr.onerror = function() { self.fetchProxy(rawUrl); };
+            xhr.send();
+        },
 
-            const lines = textData.split('\n');
-            let currentBlock = []; 
+        fetchProxy: function(url) {
+            document.getElementById('statusText').innerText = "Baixando via Rota Segura...";
+            var proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", proxyUrl, true);
+            xhr.timeout = 30000;
 
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i].trim();
-                
+            var self = this;
+            xhr.onload = function() {
+                if(xhr.status === 200 && xhr.responseText.length > 100) {
+                    self.processData(xhr.responseText);
+                } else {
+                    self.showError();
+                }
+            };
+            xhr.onerror = function() { self.showError(); };
+            xhr.send();
+        },
+
+        processData: function(textData) {
+            document.getElementById('statusText').innerText = "Aplicando a sua escolha...";
+
+            // O cabeçalho mágico fixo na primeira linha
+            var m3uContent = '#EXTM3U size="Medium"\n';
+            var itemCount = 0;
+
+            var lines = textData.split('\n');
+            var currentBlock = [];
+
+            // Laço de repetição clássico (ES5) - Super leve para memórias fracas
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+
                 if (!line) continue;
-                if (line.startsWith('#EXTM3U')) continue; 
+                if (line.indexOf('#EXTM3U') === 0) continue;
 
-                if (!line.startsWith('http')) {
+                if (line.indexOf('http') !== 0) {
                     currentBlock.push(line);
                 } else {
-                    let isMovie = line.includes('/movie/');
-                    let isSeries = line.includes('/series/');
-                    let isLive = !isMovie && !isSeries;
+                    var isMovie = line.indexOf('/movie/') > -1;
+                    var isSeries = line.indexOf('/series/') > -1;
+                    var isLive = !isMovie && !isSeries;
 
-                    let keepItem = false;
-
-                    // Lógica de escolha baseada no que o usuário selecionou no dropdown
-                    if (contentType === 'live' && isLive) keepItem = true;
-                    else if (contentType === 'movie' && isMovie) keepItem = true;
-                    else if (contentType === 'series' && isSeries) keepItem = true;
-                    else if (contentType === 'all') keepItem = true;
+                    var keepItem = false;
+                    
+                    if (this.type === 'live' && isLive) keepItem = true;
+                    else if (this.type === 'movie' && isMovie) keepItem = true;
+                    else if (this.type === 'series' && isSeries) keepItem = true;
+                    else if (this.type === 'all') keepItem = true;
 
                     if (keepItem) {
                         m3uContent += currentBlock.join('\n') + '\n' + line + '\n';
                         itemCount++;
                     }
-                    
-                    currentBlock = []; // Reseta para o próximo
+                    currentBlock = [];
                 }
             }
 
-            // Define o nome do arquivo que será baixado de acordo com a escolha
-            let fileName = "lista_completa.m3u";
-            let typeLabel = "Itens";
-            
-            if (contentType === 'live') { fileName = "tv_ao_vivo.m3u"; typeLabel = "Canais"; }
-            else if (contentType === 'movie') { fileName = "filmes.m3u"; typeLabel = "Filmes"; }
-            else if (contentType === 'series') { fileName = "series.m3u"; typeLabel = "Episódios"; }
+            var fileName = "lista_completa.m3u";
+            var typeLabel = "Itens";
 
-            const blob = new Blob([m3uContent], { type: 'text/plain' });
-            const blobUrl = URL.createObjectURL(blob);
-            
-            document.getElementById('statsText').innerHTML = `Total Extraído:<br><span>${itemCount} ${typeLabel}</span>`;
-            
-            let downloadBtn = document.getElementById('downloadBtn');
+            if (this.type === 'live') { fileName = "tv_ao_vivo.m3u"; typeLabel = "Canais"; }
+            else if (this.type === 'movie') { fileName = "filmes.m3u"; typeLabel = "Filmes"; }
+            else if (this.type === 'series') { fileName = "series.m3u"; typeLabel = "Episódios"; }
+
+            var blob = new Blob([m3uContent], { type: 'text/plain' });
+            var blobUrl = URL.createObjectURL(blob);
+
+            document.getElementById('statsText').innerHTML = "Total de Conteúdo Limpo:<br><span>" + itemCount + " " + typeLabel + "</span>";
+
+            var downloadBtn = document.getElementById('downloadBtn');
             downloadBtn.href = blobUrl;
             downloadBtn.download = fileName;
-            
-            statusBox.style.display = 'none';
-            resultArea.style.display = 'block';
 
-        } catch (error) {
-            statusBox.style.display = 'none';
-            alert("ERRO: Falha ao baixar a lista. Verifique os dados inseridos.");
-            console.error(error);
-        } finally {
-            btn.disabled = false;
+            document.getElementById('statusBox').style.display = 'none';
+            document.getElementById('resultArea').style.display = 'block';
+            document.getElementById('btnSubmit').disabled = false;
+        },
+
+        showError: function() {
+            document.getElementById('statusBox').style.display = 'none';
+            document.getElementById('btnSubmit').disabled = false;
+            alert("ERRO: Falha ao puxar os dados. O servidor da matriz pode estar bloqueando ou fora do ar.");
         }
-    }
+    };
 </script>
 
 </body>
