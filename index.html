@@ -3,57 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>M3U Studio Pro - Engine Híbrida</title>
+    <title>M3U Extrator Exclusivo - SÉRIES</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-deep: #000000;
-            --card-bg: #0a0a0a;
-            --ferrari-red: #FF2800;
+            --bg-deep: #050505;
+            --card-bg: #111111;
+            --series-color: #aa66cc;
+            --series-hover: #8844aa;
             --text-main: #ffffff;
             --success: #00C851;
             --warning: #ffbb33;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; outline: none; -webkit-tap-highlight-color: transparent; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; outline: none; }
         body { background-color: var(--bg-deep); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
         
         .container { 
-            background: var(--card-bg); border: 2px solid var(--ferrari-red); border-radius: 12px; 
-            padding: 35px; width: 100%; max-width: 450px; text-align: center; box-shadow: 0 10px 30px rgba(255, 40, 0, 0.15);
+            background: var(--card-bg); border: 2px solid var(--series-color); border-radius: 12px; 
+            padding: 35px; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(170, 102, 204, 0.15);
         }
         
-        .logo-txt { font-size: 26px; font-weight: 900; margin-bottom: 25px; }
-        .red-text { color: var(--ferrari-red); }
-        
-        .form-group { text-align: left; margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 12px; color: #888; font-weight: 700; margin-bottom: 5px; margin-left: 5px; }
+        .logo-txt { font-size: 26px; font-weight: 900; margin-bottom: 5px; color: #fff; }
+        .sub-txt { font-size: 12px; color: #888; margin-bottom: 25px; font-weight: 600; text-transform: uppercase; }
+        .highlight { color: var(--series-color); }
         
         .inp, select.inp { 
-            width: 100%; padding: 14px; background: #151515; 
+            width: 100%; padding: 15px; margin: 8px 0; background: #1a1a1a; 
             border: 1px solid #333; color: #fff; font-weight: 600; 
-            border-radius: 8px; font-size: 14px; transition: 0.3s;
+            border-radius: 8px; font-size: 14px; transition: 0.3s; text-align: center;
         }
-        .inp:focus, select.inp:focus { border-color: var(--ferrari-red); background: #1a1a1a; }
-        select.inp { appearance: none; cursor: pointer; color: var(--warning); font-weight: 800; }
+        .inp:focus, select.inp:focus { border-color: var(--series-color); background: #222; }
         
-        .select-wrapper { position: relative; }
-        .select-wrapper::after {
-            content: '\f0d7'; font-family: "Font Awesome 6 Free"; font-weight: 900;
-            position: absolute; right: 15px; top: 15px; color: var(--warning); pointer-events: none;
-        }
-
         .btn { 
-            width: 100%; padding: 16px; margin-top: 20px; background: var(--ferrari-red); 
+            width: 100%; padding: 16px; margin-top: 20px; background: var(--series-color); 
             color: #fff; border: none; font-weight: 900; border-radius: 8px; font-size: 16px; 
-            cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 10px;
+            cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 10px; text-transform: uppercase;
         }
-        .btn:hover { background: #d62200; transform: scale(0.98); }
+        .btn:hover { background: var(--series-hover); transform: scale(0.98); }
         .btn:disabled { background: #333; color: #888; cursor: not-allowed; transform: none; }
         
-        .status-box { margin-top: 20px; font-size: 14px; font-weight: 600; display: none; color: var(--warning); }
-        .spin { animation: fa-spin 2s infinite linear; }
+        .progress-box { margin-top: 25px; display: none; background: #1a1a1a; border-radius: 8px; padding: 20px; border: 1px solid #333; }
+        .spin { animation: fa-spin 2s infinite linear; font-size: 24px; color: var(--series-color); margin-bottom: 15px; display: inline-block;}
+        .status-title { font-size: 14px; font-weight: 800; color: #fff; margin-bottom: 8px; }
+        .status-desc { font-size: 13px; color: var(--warning); font-weight: 600; line-height: 1.5; word-wrap: break-word;}
         
+        .progress-bar-bg { width: 100%; height: 8px; background: #333; border-radius: 10px; margin-top: 15px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: var(--series-color); width: 0%; transition: width 0.3s ease; }
+
         .result-area { margin-top: 20px; display: none; background: #111; padding: 20px; border-radius: 8px; border: 1px solid var(--success); }
         .success-text { color: var(--success); font-weight: 800; margin-bottom: 10px; font-size: 18px; }
         .stats { font-size: 14px; color: #ccc; margin-bottom: 15px; font-weight: 600; }
@@ -69,326 +66,181 @@
 <body>
 
 <div class="container">
-    <div class="logo-txt"><i class="fas fa-sliders red-text"></i> M3U <span class="red-text">STUDIO</span></div>
+    <div class="logo-txt"><i class="fas fa-clapperboard highlight"></i> M3U <span class="highlight">SÉRIES</span></div>
+    <div class="sub-txt">Extrator de Episódios via API Profunda</div>
 
-    <form onsubmit="event.preventDefault(); AppBuilder.start();">
-        <div class="form-group">
-            <input type="url" id="serverUrl" class="inp" placeholder="URL DNS (Ex: http://tv.com:8080)" required autocomplete="off">
-        </div>
-        <div class="form-group">
-            <input type="text" id="username" class="inp" placeholder="USUÁRIO" required autocomplete="off">
-        </div>
-        <div class="form-group">
-            <input type="text" id="password" class="inp" placeholder="SENHA" required autocomplete="off">
-        </div>
+    <form onsubmit="event.preventDefault(); SeriesExtractor.start();">
+        <input type="url" id="serverUrl" class="inp" placeholder="URL DNS (Ex: http://tv.com:8080)" required autocomplete="off">
+        <input type="text" id="username" class="inp" placeholder="USUÁRIO" required autocomplete="off">
+        <input type="text" id="password" class="inp" placeholder="SENHA" required autocomplete="off">
         
-        <div class="form-group select-wrapper">
-            <label>1. O QUE VOCÊ QUER NA LISTA?</label>
-            <select id="contentType" class="inp">
-                <option value="live">📺 APENAS TV AO VIVO</option>
-                <option value="movie">🎬 APENAS FILMES</option>
-                <option value="series">🍿 APENAS SÉRIES</option>
-                <option value="all">📦 TUDO JUNTO (Completa)</option>
-            </select>
-        </div>
-
-        <div class="form-group select-wrapper">
-            <label>2. QUAL O FORMATO?</label>
-            <select id="format" class="inp">
-                <option value="ts">Formato: TS (Smart TV)</option>
-                <option value="m3u8">Formato: M3U8 (Web / App)</option>
-            </select>
-        </div>
+        <select id="format" class="inp" style="appearance: none; cursor: pointer; color: var(--warning);">
+            <option value="ts">Formato: TS (Smart TV / Nativo)</option>
+            <option value="m3u8">Formato: M3U8 (Web / Celular)</option>
+        </select>
         
         <button type="submit" class="btn" id="btnSubmit">
-            <i class="fas fa-bolt"></i> GERAR MINHA LISTA
+            <i class="fas fa-search"></i> Extrair Minhas Séries
         </button>
     </form>
 
-    <div id="statusBox" class="status-box">
-        <i class="fas fa-circle-notch spin"></i> <span id="statusText">Conectando...</span>
+    <div id="progressBox" class="progress-box">
+        <i class="fas fa-circle-notch spin"></i> 
+        <div class="status-title" id="statusTitle">Conectando ao Painel...</div>
+        <div class="status-desc" id="statusDesc">Aguarde a resposta do servidor.</div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressBar"></div></div>
     </div>
 
     <div id="resultArea" class="result-area">
-        <div class="success-text"><i class="fas fa-check-circle"></i> ARQUIVO PRONTO!</div>
+        <div class="success-text"><i class="fas fa-check-circle"></i> EXTRAÇÃO CONCLUÍDA!</div>
         <div class="stats" id="statsText"></div>
-        <a id="downloadBtn" href="#" class="btn-download" download="lista.m3u">
-            <i class="fas fa-download"></i> BAIXAR AGORA
+        <a id="downloadBtn" href="#" class="btn-download" download="series_completas.m3u">
+            <i class="fas fa-download"></i> BAIXAR SÉRIES (.M3U)
         </a>
     </div>
 </div>
 
 <script>
-    var AppBuilder = {
-        start: function() {
-            var btn = document.getElementById('btnSubmit');
-            var statusBox = document.getElementById('statusBox');
-            var resultArea = document.getElementById('resultArea');
+    var SeriesExtractor = {
+        m3u: '', totalEps: 0, server: '', user: '', pass: '', format: '',
 
+        start: async function() {
             this.server = document.getElementById('serverUrl').value.trim();
             this.user = document.getElementById('username').value.trim();
             this.pass = document.getElementById('password').value.trim();
             this.format = document.getElementById('format').value;
-            this.type = document.getElementById('contentType').value;
 
-            if(this.server.charAt(this.server.length - 1) === '/') this.server = this.server.slice(0, -1);
-            if(this.server.indexOf('http') !== 0) this.server = 'http://' + this.server;
+            if(this.server.endsWith('/')) this.server = this.server.slice(0, -1);
+            if(!this.server.startsWith('http')) this.server = 'http://' + this.server;
 
-            btn.disabled = true;
-            resultArea.style.display = 'none';
-            statusBox.style.display = 'block';
+            document.getElementById('btnSubmit').disabled = true;
+            document.getElementById('resultArea').style.display = 'none';
+            document.getElementById('progressBox').style.display = 'block';
+            this.updateStatus("Autenticando...", "Verificando conexão com a matriz.");
+            this.updateProgress(5);
+
+            this.m3u = '#EXTM3U size="Medium"\n';
+            this.totalEps = 0;
+
+            try {
+                await this.processAllSeries();
+            } catch (error) {
+                this.updateStatus("ERRO FATAL", error.message);
+                document.getElementById('btnSubmit').disabled = false;
+                document.querySelector('.spin').style.display = 'none';
+            }
+        },
+
+        updateStatus: function(title, desc) {
+            document.getElementById('statusTitle').innerText = title;
+            document.getElementById('statusDesc').innerText = desc;
+        },
+
+        updateProgress: function(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
+        },
+
+        // Função moderna e segura para requisições com bypass automático
+        fetchAPI: async function(actionStr) {
+            let url = `${this.server}/player_api.php?username=${this.user}&password=${this.pass}&${actionStr}`;
+            let proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
             
-            // Roteamento de Extração: 
-            if (this.type === 'live' || this.type === 'movie') {
-                this.fetchViaAPI(); // TV e Filmes: API Pura (já comprovado que funciona no seu servidor)
-            } else if (this.type === 'series') {
-                this.fetchSeriesViaHybrid(); // Séries: Lógica Mista para contornar a ausência de links diretos na API
-            } else {
-                this.fetchAll(); // Tudo Junto: Baixa o banco original
+            try {
+                // Tenta direto primeiro
+                let res = await fetch(url);
+                if (!res.ok) throw new Error("CORS");
+                let data = await res.json();
+                return data;
+            } catch (e) {
+                // Se o navegador barrar, usa o proxy
+                let resProxy = await fetch(proxyUrl);
+                if (!resProxy.ok) throw new Error("Falha na Matriz");
+                let data = await resProxy.json();
+                return data;
             }
         },
 
-        reqJSON: function(url, callback) {
-            var xhr = new XMLHttpRequest();
-            var cacheBuster = (url.indexOf('?') > -1 ? '&' : '?') + '_t=' + new Date().getTime();
-            var isHttps = window.location.protocol === 'https:';
-            var fetchUrl = (isHttps && url.indexOf('http://') === 0) 
-                ? "https://api.allorigins.win/raw?url=" + encodeURIComponent(url + cacheBuster) 
-                : url + cacheBuster;
-
-            xhr.open("GET", fetchUrl, true);
-            xhr.timeout = 30000;
-            xhr.onload = function() {
-                if (xhr.status === 200 && xhr.responseText.indexOf('{') > -1) {
-                    try { callback(JSON.parse(xhr.responseText)); } catch(e) { callback(null); }
-                } else if (!isHttps) {
-                    var proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url + cacheBuster);
-                    var pxhr = new XMLHttpRequest();
-                    pxhr.open("GET", proxyUrl, true);
-                    pxhr.onload = function() {
-                        if (pxhr.status === 200 && pxhr.responseText.indexOf('{') > -1) {
-                            try { callback(JSON.parse(pxhr.responseText)); } catch(e) { callback(null); }
-                        } else { callback(null); }
-                    };
-                    pxhr.onerror = function() { callback(null); };
-                    pxhr.send();
-                } else { callback(null); }
-            };
-            xhr.onerror = function() { callback(null); };
-            xhr.send();
-        },
-
-        fetchText: function(url, callback) {
-            var xhr = new XMLHttpRequest();
-            var cacheBuster = (url.indexOf('?') > -1 ? '&' : '?') + '_t=' + new Date().getTime();
-            var isHttps = window.location.protocol === 'https:';
-            var fetchUrl = (isHttps && url.indexOf('http://') === 0) 
-                ? "https://api.allorigins.win/raw?url=" + encodeURIComponent(url + cacheBuster) 
-                : url + cacheBuster;
-
-            xhr.open("GET", fetchUrl, true);
-            xhr.timeout = 40000;
-            xhr.onload = function() {
-                if (xhr.status === 200 && xhr.responseText.length > 100) {
-                    callback(xhr.responseText);
-                } else if (!isHttps) {
-                    var proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url + cacheBuster);
-                    var pxhr = new XMLHttpRequest();
-                    pxhr.open("GET", proxyUrl, true);
-                    pxhr.onload = function() {
-                        if (pxhr.status === 200 && pxhr.responseText.length > 100) {
-                            callback(pxhr.responseText);
-                        } else { callback(null); }
-                    };
-                    pxhr.onerror = function() { callback(null); };
-                    pxhr.send();
-                } else { callback(null); }
-            };
-            xhr.onerror = function() { callback(null); };
-            xhr.send();
-        },
-
-        /* ===== MÉTODO PARA TV E FILMES ===== */
-        fetchViaAPI: function() {
-            var self = this;
-            var actionCat = this.type === 'live' ? 'get_live_categories' : 'get_vod_categories';
-            var actionStrm = this.type === 'live' ? 'get_live_streams' : 'get_vod_streams';
-
-            document.getElementById('statusText').innerText = "Baixando Categorias...";
-            var catUrl = this.server + "/player_api.php?username=" + this.user + "&password=" + this.pass + "&action=" + actionCat;
-
-            this.reqJSON(catUrl, function(cats) {
-                if (!cats || !cats.length) { self.showError(); return; }
-                
-                var catMap = {};
-                for(var i=0; i<cats.length; i++) {
-                    catMap[cats[i].category_id] = cats[i].category_name;
-                }
-
-                document.getElementById('statusText').innerText = "Lendo Banco de Dados...";
-                var strmUrl = self.server + "/player_api.php?username=" + self.user + "&password=" + self.pass + "&action=" + actionStrm;
-
-                self.reqJSON(strmUrl, function(streams) {
-                    if (!streams || !streams.length) { self.showError(); return; }
-                    self.buildM3UFromJSON(streams, catMap);
-                });
-            });
-        },
-
-        buildM3UFromJSON: function(streams, catMap) {
-            document.getElementById('statusText').innerText = "Construindo M3U limpo...";
-            var m3uContent = '#EXTM3U size="Medium"\n';
-            var count = 0;
-
-            for(var i = 0; i < streams.length; i++) {
-                var item = streams[i];
-                var name = item.name || item.title || "Unknown";
-                var logo = item.stream_icon || "";
-                var catId = item.category_id;
-                var catName = catMap[catId] || "Sem Categoria";
-                var id = item.stream_id || item.id;
-
-                var ext = "";
-                var path = "";
-                if (this.type === 'live') {
-                    ext = this.format; 
-                    path = "/live/";
-                } else {
-                    ext = item.container_extension || "mp4";
-                    path = "/movie/";
-                }
-
-                var url = this.server + path + this.user + "/" + this.pass + "/" + id + "." + ext;
-
-                m3uContent += '#EXTINF:-1 tvg-id="' + (item.epg_channel_id || '') + '" tvg-name="' + name + '" tvg-logo="' + logo + '" group-title="' + catName + '",' + name + '\n';
-                m3uContent += url + '\n';
-                count++;
-            }
-            this.finishDownload(m3uContent, count);
-        },
-
-        /* ===== MÉTODO EXCLUSIVO PARA SÉRIES ===== */
-        fetchSeriesViaHybrid: function() {
-            var self = this;
-            document.getElementById('statusText').innerText = "Mapeando Painel de Séries...";
-            var catUrl = this.server + "/player_api.php?username=" + this.user + "&password=" + this.pass + "&action=get_series_categories";
-
-            this.reqJSON(catUrl, function(cats) {
-                var seriesCatNames = {};
-                if (cats && cats.length) {
-                    for(var i=0; i<cats.length; i++) {
-                        if (cats[i].category_name) {
-                            seriesCatNames[cats[i].category_name.toLowerCase().trim()] = true; // Salva o nome exato da categoria
-                        }
-                    }
-                }
-                
-                document.getElementById('statusText').innerText = "Filtrando M3U (Pode levar alguns segundos)...";
-                var rawUrl = self.server + "/get.php?username=" + self.user + "&password=" + self.pass + "&type=m3u_plus&output=" + self.format;
-                
-                self.fetchText(rawUrl, function(textData) {
-                    if (textData) {
-                        self.processSeriesM3U(textData, seriesCatNames);
-                    } else {
-                        self.showError();
-                    }
-                });
-            });
-        },
-
-        processSeriesM3U: function(textData, seriesCatNames) {
-            document.getElementById('statusText').innerText = "Extraindo Episódios...";
-            var m3uContent = '#EXTM3U size="Medium"\n';
-            var itemCount = 0;
-            var lines = textData.split('\n');
-            var currentBlock = [];
-
-            for (var i = 0; i < lines.length; i++) {
-                var line = lines[i].trim();
-                if (!line) continue;
-                if (line.indexOf('#EXTM3U') === 0) continue;
-
-                if (line.indexOf('http') !== 0) {
-                    currentBlock.push(line);
-                } else {
-                    var isSeries = false;
-                    var infoLine = currentBlock.join(' ');
-                    
-                    // O PULO DO GATO: Se o "group-title" do link bater com as categorias da API, É SÉRIE!
-                    var match = infoLine.match(/group-title="([^"]+)"/i);
-                    if (match && match[1]) {
-                        var gTitle = match[1].toLowerCase().trim();
-                        if (seriesCatNames[gTitle]) {
-                            isSeries = true;
-                        }
-                    }
-
-                    // Prevenção extra caso a categoria não seja exata
-                    if (!isSeries) {
-                        var upperInfo = infoLine.toUpperCase();
-                        if (line.indexOf('/series/') > -1 || upperInfo.match(/S\d+\s*E\d+/i) || upperInfo.indexOf('EPISÓDIO') > -1) {
-                            isSeries = true;
-                        }
-                    }
-
-                    if (isSeries) {
-                        m3uContent += currentBlock.join('\n') + '\n' + line + '\n';
-                        itemCount++;
-                    }
-                    currentBlock = [];
-                }
-            }
-            this.finishDownload(m3uContent, itemCount);
-        },
-
-        /* ===== MÉTODO PARA BAIXAR TUDO ===== */
-        fetchAll: function() {
-            var self = this;
-            document.getElementById('statusText').innerText = "Baixando Lista Completa...";
-            var rawUrl = this.server + "/get.php?username=" + this.user + "&password=" + this.pass + "&type=m3u_plus&output=" + this.format;
+        processAllSeries: async function() {
+            this.updateStatus("Mapeando Banco de Dados...", "Baixando categorias de séries.");
+            let cats = await this.fetchAPI("action=get_series_categories");
             
-            this.fetchText(rawUrl, function(textData) {
-                if (textData) {
-                    var itemCount = (textData.match(/#EXTINF/g) || []).length;
-                    
-                    // Garante o cabeçalho correto mantendo todo o resto original
-                    var replaced = textData.replace(/^#EXTM3U.*$/m, '#EXTM3U size="Medium"');
-                    if (replaced.indexOf('#EXTM3U size="Medium"') === -1) {
-                        replaced = '#EXTM3U size="Medium"\n' + replaced;
+            let catMap = {};
+            if (cats && cats.length) {
+                for(let c of cats) catMap[c.category_id] = c.category_name;
+            }
+
+            this.updateStatus("Localizando Séries...", "Baixando índice principal de séries.");
+            this.updateProgress(10);
+            let seriesList = await this.fetchAPI("action=get_series");
+
+            if (!seriesList || seriesList.length === 0) {
+                throw new Error("Nenhuma série encontrada neste servidor.");
+            }
+
+            let totalSeries = seriesList.length;
+            
+            // Vamos processar as séries 1 por 1 (para evitar que o servidor da matriz bloqueie seu IP por excesso de velocidade)
+            for (let i = 0; i < totalSeries; i++) {
+                let s = seriesList[i];
+                let percent = Math.floor(10 + ((i / totalSeries) * 90));
+                
+                this.updateStatus(`Extraindo (${i+1} de ${totalSeries})`, `Processando: ${s.name || s.title || 'Desconhecido'} \nEpisódios encontrados até agora: ${this.totalEps}`);
+                this.updateProgress(percent);
+
+                try {
+                    let info = await this.fetchAPI(`action=get_series_info&series_id=${s.series_id}`);
+                    if (info && info.episodes) {
+                        let catName = catMap[s.category_id] || "Séries";
+                        let sName = s.name || s.title || "Série";
+                        let cover = s.cover || "";
+
+                        // Varre temporadas e episódios
+                        for (let seasonKey in info.episodes) {
+                            let eps = info.episodes[seasonKey];
+                            for (let e = 0; e < eps.length; e++) {
+                                let ep = eps[e];
+                                let ext = ep.container_extension || "mp4";
+                                let epUrl = `${this.server}/series/${this.user}/${this.pass}/${ep.id}.${ext}`;
+                                
+                                let sNum = parseInt(seasonKey);
+                                let eNum = parseInt(ep.episode_num || (e+1));
+                                let epTitle = `${sName} - S${sNum<10?'0':''}${sNum}E${eNum<10?'0':''}${eNum} - ${ep.title || 'Episódio '+eNum}`;
+                                
+                                this.m3u += `#EXTINF:-1 tvg-id="" tvg-name="${epTitle}" tvg-logo="${cover}" group-title="${catName}",${epTitle}\n${epUrl}\n`;
+                                this.totalEps++;
+                            }
+                        }
                     }
-                    self.finishDownload(replaced, itemCount);
-                } else {
-                    self.showError();
+                } catch(err) {
+                    console.warn("Falha ao puxar episódios da série ID: " + s.series_id);
                 }
-            });
+
+                // Pequena pausa (100 milissegundos) para não derrubar a conexão da matriz
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            this.finish();
         },
 
-        finishDownload: function(m3uContent, count) {
-            var fileName = "lista_completa.m3u";
-            var typeLabel = "Itens";
+        finish: function() {
+            if (this.totalEps === 0) {
+                this.updateStatus("ERRO", "Nenhum episódio pôde ser extraído. O servidor pode estar bloqueando as requisições.");
+                document.getElementById('btnSubmit').disabled = false;
+                document.querySelector('.spin').style.display = 'none';
+                return;
+            }
 
-            if (this.type === 'live') { fileName = "tv_ao_vivo.m3u"; typeLabel = "Canais"; }
-            else if (this.type === 'movie') { fileName = "filmes.m3u"; typeLabel = "Filmes"; }
-            else if (this.type === 'series') { fileName = "series.m3u"; typeLabel = "Episódios"; }
+            let blob = new Blob([this.m3u], { type: 'text/plain' });
+            let blobUrl = URL.createObjectURL(blob);
 
-            var blob = new Blob([m3uContent], { type: 'text/plain' });
-            var blobUrl = URL.createObjectURL(blob);
-
-            document.getElementById('statsText').innerHTML = "Total Extraído:<br><span>" + count + " " + typeLabel + "</span>";
-
-            var downloadBtn = document.getElementById('downloadBtn');
+            document.getElementById('statsText').innerHTML = `Sucesso total!<br><span>${this.totalEps} Episódios Copiados</span>`;
+            
+            let downloadBtn = document.getElementById('downloadBtn');
             downloadBtn.href = blobUrl;
-            downloadBtn.download = fileName;
 
-            document.getElementById('statusBox').style.display = 'none';
+            document.getElementById('progressBox').style.display = 'none';
             document.getElementById('resultArea').style.display = 'block';
             document.getElementById('btnSubmit').disabled = false;
-        },
-
-        showError: function() {
-            document.getElementById('statusBox').style.display = 'none';
-            document.getElementById('btnSubmit').disabled = false;
-            alert("ERRO: Falha ao puxar os dados. Verifique a URL, Usuário e Senha, ou tente novamente mais tarde.");
         }
     };
 </script>
