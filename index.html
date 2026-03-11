@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gerador M3U Pro - Ultimate</title>
+    <title>M3U Studio Pro - Gerador Híbrido</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
@@ -20,7 +20,7 @@
         
         .container { 
             background: var(--card-bg); border: 2px solid var(--ferrari-red); border-radius: 12px; 
-            padding: 35px; width: 100%; max-width: 480px; text-align: center; box-shadow: 0 10px 30px rgba(255, 40, 0, 0.15);
+            padding: 35px; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(255, 40, 0, 0.15);
         }
         
         .logo-txt { font-size: 26px; font-weight: 900; margin-bottom: 25px; }
@@ -37,9 +37,10 @@
         .check-group {
             display: flex; justify-content: space-between; background: #151515;
             padding: 15px; border-radius: 8px; border: 1px solid #333; margin: 10px 0;
+            flex-wrap: wrap; gap: 10px;
         }
         .check-item {
-            display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ccc; transition: 0.2s;
+            display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ccc; transition: 0.2s; flex: 1; justify-content: center;
         }
         .check-item:hover { color: #fff; }
         .check-item input { width: 18px; height: 18px; accent-color: var(--ferrari-red); cursor: pointer; }
@@ -57,8 +58,8 @@
         
         .result-area { margin-top: 20px; display: none; background: #111; padding: 20px; border-radius: 8px; border: 1px solid var(--success); }
         .success-text { color: var(--success); font-weight: 800; margin-bottom: 10px; font-size: 18px; }
-        .stats { font-size: 13px; color: #aaa; margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; }
-        .stats span { font-weight: bold; color: #fff; }
+        .stats { font-size: 13px; color: #aaa; margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; text-align: left; background: #000; padding: 10px; border-radius: 6px; }
+        .stats span { font-weight: bold; color: #fff; float: right; }
         
         .btn-download {
             display: inline-block; width: 100%; padding: 14px; background: var(--success); 
@@ -78,13 +79,13 @@
         <input type="text" id="password" class="inp" placeholder="SENHA" required autocomplete="off">
         
         <select id="format" class="inp">
-            <option value="ts">Formato de Saída: TS (Padrão Smart TVs)</option>
-            <option value="m3u8">Formato de Saída: M3U8 (Web e Celular)</option>
+            <option value="ts">Formato de Saída: TS (Padrão / Smart TVs)</option>
+            <option value="m3u8">Formato de Saída: M3U8 (Web / Celulares)</option>
         </select>
 
         <div class="check-group">
             <label class="check-item">
-                <input type="checkbox" id="chkLive" checked> <i class="fas fa-tv"></i> Ao Vivo
+                <input type="checkbox" id="chkLive" checked> <i class="fas fa-tv"></i> TV Ao Vivo
             </label>
             <label class="check-item">
                 <input type="checkbox" id="chkMovies" checked> <i class="fas fa-film"></i> Filmes
@@ -95,7 +96,7 @@
         </div>
         
         <button type="submit" class="btn" id="btnSubmit">
-            <i class="fas fa-bolt"></i> CONSTRUIR LISTA M3U
+            <i class="fas fa-wand-magic-sparkles"></i> CONSTRUIR LISTA M3U
         </button>
     </form>
 
@@ -107,7 +108,7 @@
         <div class="success-text"><i class="fas fa-check-circle"></i> LISTA PRONTA!</div>
         <div class="stats" id="statsText">
             </div>
-        <a id="downloadBtn" href="#" class="btn-download" download="minha_lista_customizada.m3u">
+        <a id="downloadBtn" href="#" class="btn-download" download="lista_personalizada.m3u">
             <i class="fas fa-download"></i> BAIXAR ARQUIVO .M3U
         </a>
     </div>
@@ -130,7 +131,7 @@
         let chkSeries = document.getElementById('chkSeries').checked;
 
         if(!chkLive && !chkMovies && !chkSeries) {
-            alert("⚠️ Selecione pelo menos um conteúdo (Ao Vivo, Filmes ou Séries) para gerar a lista.");
+            alert("Selecione pelo menos um tipo de conteúdo (Ao Vivo, Filmes ou Séries).");
             return;
         }
 
@@ -142,29 +143,29 @@
         statusBox.style.display = 'block';
 
         try {
-            // URL original do Xtream Codes
+            // Requisita a lista base completa (get.php) para depois filtrar localmente
             let rawUrl = `${server}/get.php?username=${user}&password=${pass}&type=m3u_plus&output=${format}`;
             let textData = "";
 
-            statusText.innerText = "Baixando base de dados da matriz...";
+            statusText.innerText = "Baixando base de dados da matriz... (Isso pode levar alguns segundos)";
             
             try {
-                // Tenta buscar diretamente (Alta velocidade)
+                // Tenta conexão direta primeiro
                 const res = await fetch(rawUrl);
-                if (!res.ok) throw new Error("Fallback para proxy");
+                if (!res.ok) throw new Error("CORS Block");
                 textData = await res.text();
             } catch (e) {
-                // Se a matriz bloquear via CORS, usa o proxy AllOrigins para bypass automático
-                statusText.innerText = "Contornando bloqueios de rede (Proxy)...";
+                // Se o navegador bloquear por segurança (CORS), utiliza um proxy gratuito
+                statusText.innerText = "Buscando via Proxy para contornar bloqueios...";
                 const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`;
                 const proxyRes = await fetch(proxyUrl);
-                if (!proxyRes.ok) throw new Error("Falha ao comunicar com a matriz.");
+                if (!proxyRes.ok) throw new Error("Matriz indisponível ou dados incorretos.");
                 textData = await proxyRes.text();
             }
 
-            statusText.innerText = "Montando arquivo M3U limpo...";
+            statusText.innerText = "Limpando e processando categorias...";
 
-            // O cabeçalho exato que você solicitou
+            // Inicia o arquivo M3U com o cabeçalho específico solicitado
             let m3uContent = '#EXTM3U size="Medium"\n';
             
             let liveCount = 0;
@@ -172,24 +173,23 @@
             let seriesCount = 0;
 
             const lines = textData.split('\n');
-            let currentBlock = []; // Guarda os metadados (ex: #EXTINF) até chegar no link de vídeo
+            let currentBlock = []; 
 
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim();
                 
-                if (!line) continue; // Pula linhas vazias
-                if (line.startsWith('#EXTM3U')) continue; // Pula o cabeçalho original
+                if (!line) continue;
+                if (line.startsWith('#EXTM3U')) continue; 
 
                 if (!line.startsWith('http')) {
-                    // Guarda informações como #EXTINF, #EXTGRP, etc.
                     currentBlock.push(line);
                 } else {
-                    // É a URL da mídia. Analisamos de onde ela vem:
+                    // Identifica o tipo do link analisando a URL gerada pelo painel Xtream
                     let isMovie = line.includes('/movie/');
                     let isSeries = line.includes('/series/');
-                    let isLive = !isMovie && !isSeries; // Se não for VOD nem Série, é TV
+                    let isLive = !isMovie && !isSeries;
 
-                    // Verifica se o usuário marcou essa opção
+                    // Adiciona à lista final apenas o que o usuário escolheu
                     if ((isLive && chkLive) || (isMovie && chkMovies) || (isSeries && chkSeries)) {
                         m3uContent += currentBlock.join('\n') + '\n' + line + '\n';
                         
@@ -197,20 +197,18 @@
                         if (isMovie) movieCount++;
                         if (isSeries) seriesCount++;
                     }
-                    // Reseta o bloco para o próximo canal/filme
-                    currentBlock = [];
+                    currentBlock = []; // Reseta para o próximo item
                 }
             }
 
-            // Criar o arquivo físico virtual
             const blob = new Blob([m3uContent], { type: 'text/plain' });
             const blobUrl = URL.createObjectURL(blob);
             
-            // Renderiza as estatísticas na tela
+            // Exibe as métricas reais do que foi extraído
             document.getElementById('statsText').innerHTML = `
-                ${chkLive ? `<div><i class="fas fa-tv"></i> Canais: <span>${liveCount}</span></div>` : ''}
+                ${chkLive ? `<div><i class="fas fa-tv"></i> TV Ao Vivo: <span>${liveCount}</span></div>` : ''}
                 ${chkMovies ? `<div><i class="fas fa-film"></i> Filmes: <span>${movieCount}</span></div>` : ''}
-                ${chkSeries ? `<div><i class="fas fa-clapperboard"></i> Episódios: <span>${seriesCount}</span></div>` : ''}
+                ${chkSeries ? `<div><i class="fas fa-clapperboard"></i> Episódios de Séries: <span>${seriesCount}</span></div>` : ''}
             `;
             
             document.getElementById('downloadBtn').href = blobUrl;
@@ -220,7 +218,7 @@
 
         } catch (error) {
             statusBox.style.display = 'none';
-            alert("ERRO: " + error.message + "\n\nVerifique se o usuário/senha estão corretos ou se a matriz está fora do ar.");
+            alert("ERRO: Falha ao conectar. Verifique se o DNS, Usuário e Senha estão corretos.");
             console.error(error);
         } finally {
             btn.disabled = false;
