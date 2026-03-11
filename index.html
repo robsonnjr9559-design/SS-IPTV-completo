@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>M3U Studio Pro - API Nativa</title>
+    <title>M3U Studio Pro - Engine Híbrida</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
@@ -138,26 +138,26 @@
             resultArea.style.display = 'none';
             statusBox.style.display = 'block';
             
-            // TV e Filmes usam API direta para montar o arquivo canal por canal sem falhas
+            // Roteamento de Extração: 
             if (this.type === 'live' || this.type === 'movie') {
-                this.fetchViaAPI();
+                this.fetchViaAPI(); // TV e Filmes: API Pura (já comprovado que funciona no seu servidor)
+            } else if (this.type === 'series') {
+                this.fetchSeriesViaHybrid(); // Séries: Lógica Mista para contornar a ausência de links diretos na API
             } else {
-                this.fetchViaGetPhp();
+                this.fetchAll(); // Tudo Junto: Baixa o banco original
             }
         },
 
         reqJSON: function(url, callback) {
             var xhr = new XMLHttpRequest();
             var cacheBuster = (url.indexOf('?') > -1 ? '&' : '?') + '_t=' + new Date().getTime();
-            
-            // Contorna proteção CORS usando o proxy público diretamente quando necessário
             var isHttps = window.location.protocol === 'https:';
             var fetchUrl = (isHttps && url.indexOf('http://') === 0) 
                 ? "https://api.allorigins.win/raw?url=" + encodeURIComponent(url + cacheBuster) 
                 : url + cacheBuster;
 
             xhr.open("GET", fetchUrl, true);
-            xhr.timeout = 25000;
+            xhr.timeout = 30000;
             xhr.onload = function() {
                 if (xhr.status === 200 && xhr.responseText.indexOf('{') > -1) {
                     try { callback(JSON.parse(xhr.responseText)); } catch(e) { callback(null); }
@@ -166,7 +166,7 @@
                     var pxhr = new XMLHttpRequest();
                     pxhr.open("GET", proxyUrl, true);
                     pxhr.onload = function() {
-                        if (pxhr.status === 200) {
+                        if (pxhr.status === 200 && pxhr.responseText.indexOf('{') > -1) {
                             try { callback(JSON.parse(pxhr.responseText)); } catch(e) { callback(null); }
                         } else { callback(null); }
                     };
@@ -178,12 +178,43 @@
             xhr.send();
         },
 
+        fetchText: function(url, callback) {
+            var xhr = new XMLHttpRequest();
+            var cacheBuster = (url.indexOf('?') > -1 ? '&' : '?') + '_t=' + new Date().getTime();
+            var isHttps = window.location.protocol === 'https:';
+            var fetchUrl = (isHttps && url.indexOf('http://') === 0) 
+                ? "https://api.allorigins.win/raw?url=" + encodeURIComponent(url + cacheBuster) 
+                : url + cacheBuster;
+
+            xhr.open("GET", fetchUrl, true);
+            xhr.timeout = 40000;
+            xhr.onload = function() {
+                if (xhr.status === 200 && xhr.responseText.length > 100) {
+                    callback(xhr.responseText);
+                } else if (!isHttps) {
+                    var proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url + cacheBuster);
+                    var pxhr = new XMLHttpRequest();
+                    pxhr.open("GET", proxyUrl, true);
+                    pxhr.onload = function() {
+                        if (pxhr.status === 200 && pxhr.responseText.length > 100) {
+                            callback(pxhr.responseText);
+                        } else { callback(null); }
+                    };
+                    pxhr.onerror = function() { callback(null); };
+                    pxhr.send();
+                } else { callback(null); }
+            };
+            xhr.onerror = function() { callback(null); };
+            xhr.send();
+        },
+
+        /* ===== MÉTODO PARA TV E FILMES ===== */
         fetchViaAPI: function() {
             var self = this;
             var actionCat = this.type === 'live' ? 'get_live_categories' : 'get_vod_categories';
             var actionStrm = this.type === 'live' ? 'get_live_streams' : 'get_vod_streams';
 
-            document.getElementById('statusText').innerText = "Baixando Categorias na Raiz...";
+            document.getElementById('statusText').innerText = "Baixando Categorias...";
             var catUrl = this.server + "/player_api.php?username=" + this.user + "&password=" + this.pass + "&action=" + actionCat;
 
             this.reqJSON(catUrl, function(cats) {
@@ -194,7 +225,7 @@
                     catMap[cats[i].category_id] = cats[i].category_name;
                 }
 
-                document.getElementById('statusText').innerText = "Organizando Banco de Dados...";
+                document.getElementById('statusText').innerText = "Lendo Banco de Dados...";
                 var strmUrl = self.server + "/player_api.php?username=" + self.user + "&password=" + self.pass + "&action=" + actionStrm;
 
                 self.reqJSON(strmUrl, function(streams) {
@@ -227,41 +258,46 @@
                     path = "/movie/";
                 }
 
-                // Cria o link perfeito e puro que quebra os travamentos
                 var url = this.server + path + this.user + "/" + this.pass + "/" + id + "." + ext;
 
                 m3uContent += '#EXTINF:-1 tvg-id="' + (item.epg_channel_id || '') + '" tvg-name="' + name + '" tvg-logo="' + logo + '" group-title="' + catName + '",' + name + '\n';
                 m3uContent += url + '\n';
                 count++;
             }
-
             this.finishDownload(m3uContent, count);
         },
 
-        fetchViaGetPhp: function() {
-            var rawUrl = this.server + "/get.php?username=" + this.user + "&password=" + this.pass + "&type=m3u_plus&output=" + this.format;
+        /* ===== MÉTODO EXCLUSIVO PARA SÉRIES ===== */
+        fetchSeriesViaHybrid: function() {
             var self = this;
+            document.getElementById('statusText').innerText = "Mapeando Painel de Séries...";
+            var catUrl = this.server + "/player_api.php?username=" + this.user + "&password=" + this.pass + "&action=get_series_categories";
 
-            document.getElementById('statusText').innerText = "Filtrando Lista Base...";
-
-            var isHttps = window.location.protocol === 'https:';
-            var fetchUrl = (isHttps && rawUrl.indexOf('http://') === 0) 
-                ? "https://api.allorigins.win/raw?url=" + encodeURIComponent(rawUrl) 
-                : rawUrl;
-
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", fetchUrl, true);
-            xhr.timeout = 40000;
-            xhr.onload = function() {
-                if (xhr.status === 200 && xhr.responseText.length > 100) {
-                    self.processM3UText(xhr.responseText);
-                } else { self.showError(); }
-            };
-            xhr.onerror = function() { self.showError(); };
-            xhr.send();
+            this.reqJSON(catUrl, function(cats) {
+                var seriesCatNames = {};
+                if (cats && cats.length) {
+                    for(var i=0; i<cats.length; i++) {
+                        if (cats[i].category_name) {
+                            seriesCatNames[cats[i].category_name.toLowerCase().trim()] = true; // Salva o nome exato da categoria
+                        }
+                    }
+                }
+                
+                document.getElementById('statusText').innerText = "Filtrando M3U (Pode levar alguns segundos)...";
+                var rawUrl = self.server + "/get.php?username=" + self.user + "&password=" + self.pass + "&type=m3u_plus&output=" + self.format;
+                
+                self.fetchText(rawUrl, function(textData) {
+                    if (textData) {
+                        self.processSeriesM3U(textData, seriesCatNames);
+                    } else {
+                        self.showError();
+                    }
+                });
+            });
         },
 
-        processM3UText: function(textData) {
+        processSeriesM3U: function(textData, seriesCatNames) {
+            document.getElementById('statusText').innerText = "Extraindo Episódios...";
             var m3uContent = '#EXTM3U size="Medium"\n';
             var itemCount = 0;
             var lines = textData.split('\n');
@@ -275,33 +311,56 @@
                 if (line.indexOf('http') !== 0) {
                     currentBlock.push(line);
                 } else {
-                    if (this.type === 'all') {
+                    var isSeries = false;
+                    var infoLine = currentBlock.join(' ');
+                    
+                    // O PULO DO GATO: Se o "group-title" do link bater com as categorias da API, É SÉRIE!
+                    var match = infoLine.match(/group-title="([^"]+)"/i);
+                    if (match && match[1]) {
+                        var gTitle = match[1].toLowerCase().trim();
+                        if (seriesCatNames[gTitle]) {
+                            isSeries = true;
+                        }
+                    }
+
+                    // Prevenção extra caso a categoria não seja exata
+                    if (!isSeries) {
+                        var upperInfo = infoLine.toUpperCase();
+                        if (line.indexOf('/series/') > -1 || upperInfo.match(/S\d+\s*E\d+/i) || upperInfo.indexOf('EPISÓDIO') > -1) {
+                            isSeries = true;
+                        }
+                    }
+
+                    if (isSeries) {
                         m3uContent += currentBlock.join('\n') + '\n' + line + '\n';
                         itemCount++;
-                    } else if (this.type === 'series') {
-                        // Filtro de séries baseado nas extensões e tags de Episódio
-                        var extParts = line.split('?')[0].split('.');
-                        var ext = extParts[extParts.length - 1].toLowerCase();
-                        var isVOD = (ext === 'mp4' || ext === 'mkv' || ext === 'avi' || ext === 'webm');
-                        var isMovie = line.indexOf('/movie/') > -1;
-                        var isSeries = line.indexOf('/series/') > -1;
-
-                        if (!isMovie && !isSeries && isVOD) {
-                            var infoLine = currentBlock.join(' ').toLowerCase();
-                            if (infoLine.indexOf(' s0') > -1 || infoLine.indexOf(' e0') > -1 || infoLine.indexOf('season') > -1 || infoLine.indexOf('episod') > -1) {
-                                isSeries = true;
-                            }
-                        }
-
-                        if (isSeries) {
-                            m3uContent += currentBlock.join('\n') + '\n' + line + '\n';
-                            itemCount++;
-                        }
                     }
                     currentBlock = [];
                 }
             }
             this.finishDownload(m3uContent, itemCount);
+        },
+
+        /* ===== MÉTODO PARA BAIXAR TUDO ===== */
+        fetchAll: function() {
+            var self = this;
+            document.getElementById('statusText').innerText = "Baixando Lista Completa...";
+            var rawUrl = this.server + "/get.php?username=" + this.user + "&password=" + this.pass + "&type=m3u_plus&output=" + this.format;
+            
+            this.fetchText(rawUrl, function(textData) {
+                if (textData) {
+                    var itemCount = (textData.match(/#EXTINF/g) || []).length;
+                    
+                    // Garante o cabeçalho correto mantendo todo o resto original
+                    var replaced = textData.replace(/^#EXTM3U.*$/m, '#EXTM3U size="Medium"');
+                    if (replaced.indexOf('#EXTM3U size="Medium"') === -1) {
+                        replaced = '#EXTM3U size="Medium"\n' + replaced;
+                    }
+                    self.finishDownload(replaced, itemCount);
+                } else {
+                    self.showError();
+                }
+            });
         },
 
         finishDownload: function(m3uContent, count) {
@@ -329,7 +388,7 @@
         showError: function() {
             document.getElementById('statusBox').style.display = 'none';
             document.getElementById('btnSubmit').disabled = false;
-            alert("ERRO: Falha ao puxar os dados. Verifique a URL, Usuário e Senha.");
+            alert("ERRO: Falha ao puxar os dados. Verifique a URL, Usuário e Senha, ou tente novamente mais tarde.");
         }
     };
 </script>
