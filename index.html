@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>M3U Studio Pro - Gerador Híbrido</title>
+    <title>M3U Studio Pro - Divisão Inteligente</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
@@ -13,6 +13,8 @@
             --ferrari-red: #FF2800;
             --text-main: #ffffff;
             --success: #00C851;
+            --movie-color: #33b5e5;
+            --series-color: #aa66cc;
             --warning: #ffbb33;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; }
@@ -33,17 +35,6 @@
         }
         .inp:focus, select.inp:focus { border-color: var(--ferrari-red); background: #1a1a1a; }
         select.inp { appearance: none; cursor: pointer; }
-        
-        .check-group {
-            display: flex; justify-content: space-between; background: #151515;
-            padding: 15px; border-radius: 8px; border: 1px solid #333; margin: 10px 0;
-            flex-wrap: wrap; gap: 10px;
-        }
-        .check-item {
-            display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer; color: #ccc; transition: 0.2s; flex: 1; justify-content: center;
-        }
-        .check-item:hover { color: #fff; }
-        .check-item input { width: 18px; height: 18px; accent-color: var(--ferrari-red); cursor: pointer; }
 
         .btn { 
             width: 100%; padding: 16px; margin-top: 15px; background: var(--ferrari-red); 
@@ -56,22 +47,28 @@
         .status-box { margin-top: 20px; font-size: 14px; font-weight: 600; display: none; color: var(--warning); }
         .spin { animation: fa-spin 2s infinite linear; }
         
-        .result-area { margin-top: 20px; display: none; background: #111; padding: 20px; border-radius: 8px; border: 1px solid var(--success); }
-        .success-text { color: var(--success); font-weight: 800; margin-bottom: 10px; font-size: 18px; }
-        .stats { font-size: 13px; color: #aaa; margin-bottom: 15px; display: flex; flex-direction: column; gap: 5px; text-align: left; background: #000; padding: 10px; border-radius: 6px; }
-        .stats span { font-weight: bold; color: #fff; float: right; }
+        .result-area { margin-top: 20px; display: none; background: #111; padding: 20px; border-radius: 8px; border: 1px solid #333; }
+        .success-text { color: var(--success); font-weight: 800; margin-bottom: 15px; font-size: 18px; }
         
-        .btn-download {
-            display: inline-block; width: 100%; padding: 14px; background: var(--success); 
-            color: #fff; text-decoration: none; border-radius: 8px; font-weight: 900; font-size: 14px; transition: 0.2s;
+        /* Botões de Download Separados */
+        .download-group { display: flex; flex-direction: column; gap: 10px; }
+        .btn-dl { 
+            display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; 
+            color: #fff; text-decoration: none; border-radius: 8px; font-weight: 800; font-size: 14px; transition: 0.2s;
         }
-        .btn-download:hover { background: #009e40; transform: scale(0.98); }
+        .btn-dl:hover { transform: scale(0.98); filter: brightness(1.1); }
+        .dl-live { background: var(--success); }
+        .dl-movie { background: var(--movie-color); }
+        .dl-series { background: var(--series-color); }
+        
+        .count-badge { background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 20px; font-size: 12px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="logo-txt"><i class="fas fa-layer-group red-text"></i> M3U <span class="red-text">STUDIO</span></div>
+    <p style="color: #888; font-size: 12px; margin-bottom: 20px; font-weight: 600;">GERA ARQUIVOS SEPARADOS PARA EVITAR TRAVAMENTOS</p>
 
     <form id="extractForm" onsubmit="event.preventDefault(); startExtraction();">
         <input type="url" id="serverUrl" class="inp" placeholder="URL DNS (Ex: http://tv.com:8080)" required autocomplete="off">
@@ -79,24 +76,12 @@
         <input type="text" id="password" class="inp" placeholder="SENHA" required autocomplete="off">
         
         <select id="format" class="inp">
-            <option value="ts">Formato de Saída: TS (Padrão / Smart TVs)</option>
-            <option value="m3u8">Formato de Saída: M3U8 (Web / Celulares)</option>
+            <option value="ts">Formato de Saída: TS</option>
+            <option value="m3u8">Formato de Saída: M3U8</option>
         </select>
-
-        <div class="check-group">
-            <label class="check-item">
-                <input type="checkbox" id="chkLive" checked> <i class="fas fa-tv"></i> TV Ao Vivo
-            </label>
-            <label class="check-item">
-                <input type="checkbox" id="chkMovies" checked> <i class="fas fa-film"></i> Filmes
-            </label>
-            <label class="check-item">
-                <input type="checkbox" id="chkSeries"> <i class="fas fa-clapperboard"></i> Séries
-            </label>
-        </div>
         
         <button type="submit" class="btn" id="btnSubmit">
-            <i class="fas fa-wand-magic-sparkles"></i> CONSTRUIR LISTA M3U
+            <i class="fas fa-filter"></i> PROCESSAR E SEPARAR LISTAS
         </button>
     </form>
 
@@ -105,12 +90,24 @@
     </div>
 
     <div id="resultArea" class="result-area">
-        <div class="success-text"><i class="fas fa-check-circle"></i> LISTA PRONTA!</div>
-        <div class="stats" id="statsText">
-            </div>
-        <a id="downloadBtn" href="#" class="btn-download" download="lista_personalizada.m3u">
-            <i class="fas fa-download"></i> BAIXAR ARQUIVO .M3U
-        </a>
+        <div class="success-text"><i class="fas fa-check-circle"></i> LISTAS SEPARADAS COM SUCESSO!</div>
+        
+        <div class="download-group">
+            <a id="dlLive" href="#" class="btn-dl dl-live" download="tv_ao_vivo.m3u" style="display: none;">
+                <span><i class="fas fa-tv"></i> Baixar TV Ao Vivo</span>
+                <span class="count-badge" id="countLive">0</span>
+            </a>
+            
+            <a id="dlMovie" href="#" class="btn-dl dl-movie" download="filmes.m3u" style="display: none;">
+                <span><i class="fas fa-film"></i> Baixar Filmes</span>
+                <span class="count-badge" id="countMovie">0</span>
+            </a>
+            
+            <a id="dlSeries" href="#" class="btn-dl dl-series" download="series.m3u" style="display: none;">
+                <span><i class="fas fa-clapperboard"></i> Baixar Séries</span>
+                <span class="count-badge" id="countSeries">0</span>
+            </a>
+        </div>
     </div>
 </div>
 
@@ -126,15 +123,6 @@
         let pass = document.getElementById('password').value.trim();
         let format = document.getElementById('format').value;
         
-        let chkLive = document.getElementById('chkLive').checked;
-        let chkMovies = document.getElementById('chkMovies').checked;
-        let chkSeries = document.getElementById('chkSeries').checked;
-
-        if(!chkLive && !chkMovies && !chkSeries) {
-            alert("Selecione pelo menos um tipo de conteúdo (Ao Vivo, Filmes ou Séries).");
-            return;
-        }
-
         if(server.endsWith('/')) server = server.slice(0, -1);
         if(!server.startsWith('http')) server = 'http://' + server;
 
@@ -142,31 +130,36 @@
         resultArea.style.display = 'none';
         statusBox.style.display = 'block';
 
+        // Esconde os botões antigos
+        document.getElementById('dlLive').style.display = 'none';
+        document.getElementById('dlMovie').style.display = 'none';
+        document.getElementById('dlSeries').style.display = 'none';
+
         try {
-            // Requisita a lista base completa (get.php) para depois filtrar localmente
             let rawUrl = `${server}/get.php?username=${user}&password=${pass}&type=m3u_plus&output=${format}`;
             let textData = "";
 
-            statusText.innerText = "Baixando base de dados da matriz... (Isso pode levar alguns segundos)";
+            statusText.innerText = "Baixando banco de dados completo... Aguarde.";
             
             try {
-                // Tenta conexão direta primeiro
                 const res = await fetch(rawUrl);
                 if (!res.ok) throw new Error("CORS Block");
                 textData = await res.text();
             } catch (e) {
-                // Se o navegador bloquear por segurança (CORS), utiliza um proxy gratuito
-                statusText.innerText = "Buscando via Proxy para contornar bloqueios...";
+                statusText.innerText = "Buscando via Proxy Seguro...";
                 const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(rawUrl)}`;
                 const proxyRes = await fetch(proxyUrl);
-                if (!proxyRes.ok) throw new Error("Matriz indisponível ou dados incorretos.");
+                if (!proxyRes.ok) throw new Error("Falha na Matriz.");
                 textData = await proxyRes.text();
             }
 
-            statusText.innerText = "Limpando e processando categorias...";
+            statusText.innerText = "Separando TV, Filmes e Séries...";
 
-            // Inicia o arquivo M3U com o cabeçalho específico solicitado
-            let m3uContent = '#EXTM3U size="Medium"\n';
+            // Inicia cada string com o cabeçalho exato que você pediu
+            const header = '#EXTM3U size="Medium"\n';
+            let liveM3u = header;
+            let movieM3u = header;
+            let seriesM3u = header;
             
             let liveCount = 0;
             let movieCount = 0;
@@ -184,41 +177,52 @@
                 if (!line.startsWith('http')) {
                     currentBlock.push(line);
                 } else {
-                    // Identifica o tipo do link analisando a URL gerada pelo painel Xtream
                     let isMovie = line.includes('/movie/');
                     let isSeries = line.includes('/series/');
                     let isLive = !isMovie && !isSeries;
 
-                    // Adiciona à lista final apenas o que o usuário escolheu
-                    if ((isLive && chkLive) || (isMovie && chkMovies) || (isSeries && chkSeries)) {
-                        m3uContent += currentBlock.join('\n') + '\n' + line + '\n';
-                        
-                        if (isLive) liveCount++;
-                        if (isMovie) movieCount++;
-                        if (isSeries) seriesCount++;
+                    let blockString = currentBlock.join('\n') + '\n' + line + '\n';
+
+                    // Separa os blocos em suas respectivas variáveis
+                    if (isMovie) {
+                        movieM3u += blockString;
+                        movieCount++;
+                    } else if (isSeries) {
+                        seriesM3u += blockString;
+                        seriesCount++;
+                    } else {
+                        liveM3u += blockString;
+                        liveCount++;
                     }
-                    currentBlock = []; // Reseta para o próximo item
+                    currentBlock = []; // Reseta o bloco
                 }
             }
 
-            const blob = new Blob([m3uContent], { type: 'text/plain' });
-            const blobUrl = URL.createObjectURL(blob);
-            
-            // Exibe as métricas reais do que foi extraído
-            document.getElementById('statsText').innerHTML = `
-                ${chkLive ? `<div><i class="fas fa-tv"></i> TV Ao Vivo: <span>${liveCount}</span></div>` : ''}
-                ${chkMovies ? `<div><i class="fas fa-film"></i> Filmes: <span>${movieCount}</span></div>` : ''}
-                ${chkSeries ? `<div><i class="fas fa-clapperboard"></i> Episódios de Séries: <span>${seriesCount}</span></div>` : ''}
-            `;
-            
-            document.getElementById('downloadBtn').href = blobUrl;
+            // Criar arquivos virtuais separados
+            const createBlobUrl = (content) => URL.createObjectURL(new Blob([content], { type: 'text/plain' }));
+
+            if (liveCount > 0) {
+                document.getElementById('dlLive').href = createBlobUrl(liveM3u);
+                document.getElementById('countLive').innerText = liveCount;
+                document.getElementById('dlLive').style.display = 'flex';
+            }
+            if (movieCount > 0) {
+                document.getElementById('dlMovie').href = createBlobUrl(movieM3u);
+                document.getElementById('countMovie').innerText = movieCount;
+                document.getElementById('dlMovie').style.display = 'flex';
+            }
+            if (seriesCount > 0) {
+                document.getElementById('dlSeries').href = createBlobUrl(seriesM3u);
+                document.getElementById('countSeries').innerText = seriesCount;
+                document.getElementById('dlSeries').style.display = 'flex';
+            }
             
             statusBox.style.display = 'none';
             resultArea.style.display = 'block';
 
         } catch (error) {
             statusBox.style.display = 'none';
-            alert("ERRO: Falha ao conectar. Verifique se o DNS, Usuário e Senha estão corretos.");
+            alert("ERRO: Falha ao conectar. Verifique os dados ou a estabilidade da matriz.");
             console.error(error);
         } finally {
             btn.disabled = false;
