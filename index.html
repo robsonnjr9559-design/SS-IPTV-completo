@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>M3U Studio Pro - Engine Otimizada</title>
+    <title>M3U Studio Pro - API Nativa</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
@@ -119,7 +119,6 @@
 </div>
 
 <script>
-    /* Lógica inspirada na Engenharia de Rede do HDTV GOLD PRO */
     var AppBuilder = {
         start: function() {
             var btn = document.getElementById('btnSubmit');
@@ -132,100 +131,180 @@
             this.format = document.getElementById('format').value;
             this.type = document.getElementById('contentType').value;
 
-            // Tratamento de URL
             if(this.server.charAt(this.server.length - 1) === '/') this.server = this.server.slice(0, -1);
             if(this.server.indexOf('http') !== 0) this.server = 'http://' + this.server;
 
             btn.disabled = true;
             resultArea.style.display = 'none';
             statusBox.style.display = 'block';
-            document.getElementById('statusText').innerText = "Conectando ao servidor...";
-
-            this.fetchData();
+            
+            // TV e Filmes usam API direta para montar o arquivo canal por canal sem falhas
+            if (this.type === 'live' || this.type === 'movie') {
+                this.fetchViaAPI();
+            } else {
+                this.fetchViaGetPhp();
+            }
         },
 
-        fetchData: function() {
-            var rawUrl = this.server + "/get.php?username=" + this.user + "&password=" + this.pass + "&type=m3u_plus&output=" + this.format;
-            
-            // Quebra de Cache idêntica ao player web que você enviou
-            var cacheBuster = "&_t=" + new Date().getTime(); 
-
+        reqJSON: function(url, callback) {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", rawUrl + cacheBuster, true);
-            xhr.timeout = 30000; // Timeout seguro
+            var cacheBuster = (url.indexOf('?') > -1 ? '&' : '?') + '_t=' + new Date().getTime();
+            
+            // Contorna proteção CORS usando o proxy público diretamente quando necessário
+            var isHttps = window.location.protocol === 'https:';
+            var fetchUrl = (isHttps && url.indexOf('http://') === 0) 
+                ? "https://api.allorigins.win/raw?url=" + encodeURIComponent(url + cacheBuster) 
+                : url + cacheBuster;
 
-            var self = this;
+            xhr.open("GET", fetchUrl, true);
+            xhr.timeout = 25000;
             xhr.onload = function() {
-                // Se a resposta for sucesso e tiver tamanho suficiente
-                if(xhr.status === 200 && xhr.responseText.length > 100) {
-                    self.processData(xhr.responseText);
-                } else {
-                    self.fetchProxy(rawUrl);
-                }
+                if (xhr.status === 200 && xhr.responseText.indexOf('{') > -1) {
+                    try { callback(JSON.parse(xhr.responseText)); } catch(e) { callback(null); }
+                } else if (!isHttps) {
+                    var proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url + cacheBuster);
+                    var pxhr = new XMLHttpRequest();
+                    pxhr.open("GET", proxyUrl, true);
+                    pxhr.onload = function() {
+                        if (pxhr.status === 200) {
+                            try { callback(JSON.parse(pxhr.responseText)); } catch(e) { callback(null); }
+                        } else { callback(null); }
+                    };
+                    pxhr.onerror = function() { callback(null); };
+                    pxhr.send();
+                } else { callback(null); }
             };
-            xhr.onerror = function() { self.fetchProxy(rawUrl); };
+            xhr.onerror = function() { callback(null); };
             xhr.send();
         },
 
-        fetchProxy: function(url) {
-            document.getElementById('statusText').innerText = "Baixando via Rota Segura...";
-            var proxyUrl = "https://api.allorigins.win/raw?url=" + encodeURIComponent(url);
-            
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", proxyUrl, true);
-            xhr.timeout = 30000;
-
+        fetchViaAPI: function() {
             var self = this;
-            xhr.onload = function() {
-                if(xhr.status === 200 && xhr.responseText.length > 100) {
-                    self.processData(xhr.responseText);
-                } else {
-                    self.showError();
+            var actionCat = this.type === 'live' ? 'get_live_categories' : 'get_vod_categories';
+            var actionStrm = this.type === 'live' ? 'get_live_streams' : 'get_vod_streams';
+
+            document.getElementById('statusText').innerText = "Baixando Categorias na Raiz...";
+            var catUrl = this.server + "/player_api.php?username=" + this.user + "&password=" + this.pass + "&action=" + actionCat;
+
+            this.reqJSON(catUrl, function(cats) {
+                if (!cats || !cats.length) { self.showError(); return; }
+                
+                var catMap = {};
+                for(var i=0; i<cats.length; i++) {
+                    catMap[cats[i].category_id] = cats[i].category_name;
                 }
+
+                document.getElementById('statusText').innerText = "Organizando Banco de Dados...";
+                var strmUrl = self.server + "/player_api.php?username=" + self.user + "&password=" + self.pass + "&action=" + actionStrm;
+
+                self.reqJSON(strmUrl, function(streams) {
+                    if (!streams || !streams.length) { self.showError(); return; }
+                    self.buildM3UFromJSON(streams, catMap);
+                });
+            });
+        },
+
+        buildM3UFromJSON: function(streams, catMap) {
+            document.getElementById('statusText').innerText = "Construindo M3U limpo...";
+            var m3uContent = '#EXTM3U size="Medium"\n';
+            var count = 0;
+
+            for(var i = 0; i < streams.length; i++) {
+                var item = streams[i];
+                var name = item.name || item.title || "Unknown";
+                var logo = item.stream_icon || "";
+                var catId = item.category_id;
+                var catName = catMap[catId] || "Sem Categoria";
+                var id = item.stream_id || item.id;
+
+                var ext = "";
+                var path = "";
+                if (this.type === 'live') {
+                    ext = this.format; 
+                    path = "/live/";
+                } else {
+                    ext = item.container_extension || "mp4";
+                    path = "/movie/";
+                }
+
+                // Cria o link perfeito e puro que quebra os travamentos
+                var url = this.server + path + this.user + "/" + this.pass + "/" + id + "." + ext;
+
+                m3uContent += '#EXTINF:-1 tvg-id="' + (item.epg_channel_id || '') + '" tvg-name="' + name + '" tvg-logo="' + logo + '" group-title="' + catName + '",' + name + '\n';
+                m3uContent += url + '\n';
+                count++;
+            }
+
+            this.finishDownload(m3uContent, count);
+        },
+
+        fetchViaGetPhp: function() {
+            var rawUrl = this.server + "/get.php?username=" + this.user + "&password=" + this.pass + "&type=m3u_plus&output=" + this.format;
+            var self = this;
+
+            document.getElementById('statusText').innerText = "Filtrando Lista Base...";
+
+            var isHttps = window.location.protocol === 'https:';
+            var fetchUrl = (isHttps && rawUrl.indexOf('http://') === 0) 
+                ? "https://api.allorigins.win/raw?url=" + encodeURIComponent(rawUrl) 
+                : rawUrl;
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", fetchUrl, true);
+            xhr.timeout = 40000;
+            xhr.onload = function() {
+                if (xhr.status === 200 && xhr.responseText.length > 100) {
+                    self.processM3UText(xhr.responseText);
+                } else { self.showError(); }
             };
             xhr.onerror = function() { self.showError(); };
             xhr.send();
         },
 
-        processData: function(textData) {
-            document.getElementById('statusText').innerText = "Aplicando a sua escolha...";
-
-            // O cabeçalho mágico fixo na primeira linha
+        processM3UText: function(textData) {
             var m3uContent = '#EXTM3U size="Medium"\n';
             var itemCount = 0;
-
             var lines = textData.split('\n');
             var currentBlock = [];
 
-            // Laço de repetição clássico (ES5) - Super leve para memórias fracas
             for (var i = 0; i < lines.length; i++) {
                 var line = lines[i].trim();
-
                 if (!line) continue;
                 if (line.indexOf('#EXTM3U') === 0) continue;
 
                 if (line.indexOf('http') !== 0) {
                     currentBlock.push(line);
                 } else {
-                    var isMovie = line.indexOf('/movie/') > -1;
-                    var isSeries = line.indexOf('/series/') > -1;
-                    var isLive = !isMovie && !isSeries;
-
-                    var keepItem = false;
-                    
-                    if (this.type === 'live' && isLive) keepItem = true;
-                    else if (this.type === 'movie' && isMovie) keepItem = true;
-                    else if (this.type === 'series' && isSeries) keepItem = true;
-                    else if (this.type === 'all') keepItem = true;
-
-                    if (keepItem) {
+                    if (this.type === 'all') {
                         m3uContent += currentBlock.join('\n') + '\n' + line + '\n';
                         itemCount++;
+                    } else if (this.type === 'series') {
+                        // Filtro de séries baseado nas extensões e tags de Episódio
+                        var extParts = line.split('?')[0].split('.');
+                        var ext = extParts[extParts.length - 1].toLowerCase();
+                        var isVOD = (ext === 'mp4' || ext === 'mkv' || ext === 'avi' || ext === 'webm');
+                        var isMovie = line.indexOf('/movie/') > -1;
+                        var isSeries = line.indexOf('/series/') > -1;
+
+                        if (!isMovie && !isSeries && isVOD) {
+                            var infoLine = currentBlock.join(' ').toLowerCase();
+                            if (infoLine.indexOf(' s0') > -1 || infoLine.indexOf(' e0') > -1 || infoLine.indexOf('season') > -1 || infoLine.indexOf('episod') > -1) {
+                                isSeries = true;
+                            }
+                        }
+
+                        if (isSeries) {
+                            m3uContent += currentBlock.join('\n') + '\n' + line + '\n';
+                            itemCount++;
+                        }
                     }
                     currentBlock = [];
                 }
             }
+            this.finishDownload(m3uContent, itemCount);
+        },
 
+        finishDownload: function(m3uContent, count) {
             var fileName = "lista_completa.m3u";
             var typeLabel = "Itens";
 
@@ -236,7 +315,7 @@
             var blob = new Blob([m3uContent], { type: 'text/plain' });
             var blobUrl = URL.createObjectURL(blob);
 
-            document.getElementById('statsText').innerHTML = "Total de Conteúdo Limpo:<br><span>" + itemCount + " " + typeLabel + "</span>";
+            document.getElementById('statsText').innerHTML = "Total Extraído:<br><span>" + count + " " + typeLabel + "</span>";
 
             var downloadBtn = document.getElementById('downloadBtn');
             downloadBtn.href = blobUrl;
@@ -250,7 +329,7 @@
         showError: function() {
             document.getElementById('statusBox').style.display = 'none';
             document.getElementById('btnSubmit').disabled = false;
-            alert("ERRO: Falha ao puxar os dados. O servidor da matriz pode estar bloqueando ou fora do ar.");
+            alert("ERRO: Falha ao puxar os dados. Verifique a URL, Usuário e Senha.");
         }
     };
 </script>
